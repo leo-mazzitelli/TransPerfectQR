@@ -24,7 +24,8 @@ namespace TransPerfectTest
         [Test]
         public void ApiClientGoQR_ReadQR_Correctly()
         {
-            string data = _apiClientGoQR.ReadQR(File.ReadAllBytes("LMazzitelli.png"));
+            string data = _apiClientGoQR.ReadQR(Path.GetFullPath("LMazzitelli.png"));
+            Assert.AreNotEqual(null, data);
         }
     }
 }

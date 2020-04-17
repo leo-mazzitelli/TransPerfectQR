@@ -1,5 +1,9 @@
-﻿using RestSharp;
+﻿using Newtonsoft.Json;
+using RestSharp;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using TransPerfect.Interfaces;
 
@@ -7,7 +11,9 @@ namespace TransPerfect.Services
 {
     public class ApiClientGoQR : ApiClient
     {
-        public ApiClientGoQR() : base(new RestClient("https://api.qrserver.com/v1/"))
+        private const string API_URL = "http://api.qrserver.com/v1/";
+
+        public ApiClientGoQR() : base(new RestClient(API_URL))
         {
         }
 
@@ -32,27 +38,21 @@ namespace TransPerfect.Services
             throw new Exception($"Error generating QR end with code {response.StatusCode}: {response.ErrorMessage}");
         }
 
-        public string ReadQR(byte[] imageBytes)
+        public string ReadQR(string imagePath)
         {
-            var request = new RestRequest("read-qr-code", Method.POST);
-
-            request.AddHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryBW8IWFKUxGM9ABOs");
-
-            request.AddFileBytes("file", imageBytes, "prueba.png");
-
-            var response = new RestResponse();
-
-            Task.Run(async () =>
+            HttpContent bytesContent = new ByteArrayContent(File.ReadAllBytes(imagePath));
+            using (var client = new HttpClient())
+            using (var formData = new MultipartFormDataContent())
             {
-                response = await GetResponseContentAsync(_restClient, request) as RestResponse;
-            }).Wait();
+                formData.Add(bytesContent, "file", "file");
+                var response = client.PostAsync(API_URL + "read-qr-code/", formData).Result;
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
 
-            if (response.IsSuccessful)
-            {
-                return response.Content;
+                return JsonConvert.SerializeObject(response.Content.ReadAsStringAsync().Result, Formatting.None);
             }
-
-            throw new Exception($"Error reading QR end with code {response.StatusCode}: {response.Content} {response.ErrorMessage}");
         }
     }
 }
